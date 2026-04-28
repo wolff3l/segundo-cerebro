@@ -369,6 +369,13 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
 /* ── THEME TOGGLE ── */
 [data-theme-toggle] svg { width: 18px; height: 18px; display: block; }
 
+/* ── TOPBAR BRAND (mobile) ── */
+.topbar-brand {
+  display: none; align-items: center; gap: var(--space-2); flex-shrink: 0;
+}
+.topbar-brand .brand-logo { width: 26px; height: 26px; color: var(--color-primary); flex-shrink: 0; }
+.topbar-brand .brand-name { font-family: var(--font-display); font-size: var(--text-base); line-height: 1; }
+
 /* ── TOAST ── */
 .toast {
   position: fixed; bottom: var(--space-6); right: var(--space-6);
@@ -398,15 +405,70 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
+/* ── BOTTOM NAV ── */
+.bottom-nav { display: none; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .sidebar { width: 56px; }
-  .brand-name, .brand-sub, .nav-item span, .sidebar-label, .sidebar-footer .week-indicator { display: none; }
-  .nav-item { padding: var(--space-3); justify-content: center; }
-  .nav-badge { display: none; }
+  /* Ocultar sidebar de escritorio */
+  .sidebar { display: none; }
+
+  /* Bottom nav */
+  .bottom-nav {
+    display: flex; position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--color-surface); border-top: 1px solid var(--color-divider);
+    z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 16px oklch(0 0 0 / 0.08);
+  }
+  .bottom-nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px; padding: var(--space-2) var(--space-1);
+    color: var(--color-text-muted); font-size: 10px; font-weight: 500;
+    cursor: pointer; transition: color var(--transition);
+    position: relative; min-height: 56px;
+  }
+  .bottom-nav-item i, .bottom-nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .bottom-nav-item.active { color: var(--color-primary); }
+  .bottom-nav-item.active .bnav-label { font-weight: 600; }
+  .bottom-nav-badge {
+    position: absolute; top: 5px; left: 50%; transform: translateX(4px);
+    background: var(--color-primary); color: var(--color-text-inverse);
+    font-size: 9px; font-weight: 700; padding: 1px 4px;
+    border-radius: var(--radius-full); min-width: 15px; text-align: center;
+    line-height: 14px; pointer-events: none;
+  }
+
+  /* Espacio para el bottom nav */
+  .main { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Toast por encima del bottom nav */
+  .toast {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px) + var(--space-3));
+    right: var(--space-4); left: var(--space-4);
+    justify-content: center;
+  }
+
+  /* Mostrar brand y ocultar título de vista en móvil */
+  .topbar-brand { display: flex; }
+  .topbar-title { display: none; }
+
   .view { padding: var(--space-5) var(--space-4); }
   .topbar { padding: var(--space-3) var(--space-4); }
+
+  /* Ocultar etiquetas de texto en botones del topbar */
+  .btn-label { display: none; }
+
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Acciones de entrada siempre visibles en móvil */
+  .entry-card .entry-actions { display: flex; }
+}
+
+/* Dispositivos táctiles: acciones visibles sin hover */
+@media (hover: none) and (pointer: coarse) {
+  .entry-card .entry-actions { display: flex; }
 }
 </style>
 </head>
@@ -462,6 +524,20 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
 <!-- MAIN -->
 <main class="main">
   <div class="topbar">
+    <!-- Brand: solo visible en móvil (en desktop lo muestra el sidebar) -->
+    <div class="topbar-brand">
+      <svg class="brand-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="15" stroke="currentColor" stroke-width="1.5" opacity="0.2"/>
+        <path d="M10 16 C10 10 14 8 16 8 C18 8 22 10 22 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <path d="M10 16 C10 22 13 24 16 24 C19 24 22 22 22 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <circle cx="10" cy="16" r="2.5" fill="currentColor" opacity="0.7"/>
+        <circle cx="22" cy="16" r="2.5" fill="currentColor" opacity="0.7"/>
+        <line x1="10" y1="16" x2="22" y2="16" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" opacity="0.4"/>
+        <circle cx="16" cy="12" r="1.5" fill="var(--color-primary)" opacity="0.9"/>
+        <circle cx="16" cy="20" r="1.5" fill="var(--color-primary)" opacity="0.9"/>
+      </svg>
+      <span class="brand-name">Segundo Cerebro</span>
+    </div>
     <div class="topbar-title" id="view-title">Capturar nueva entrada</div>
     <div class="topbar-actions">
       <button class="btn btn-ghost" onclick="exportData()" title="Exportar Copia de Seguridad">
@@ -471,12 +547,14 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
         <i data-lucide="upload"></i>
       </button>
       <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImport(event)">
-      
+      <button class="btn-icon" data-theme-toggle aria-label="Cambiar tema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <button class="btn btn-ghost" onclick="loadSampleData()" title="Cargar datos de ejemplo">
-        <i data-lucide="flask-conical"></i> Ejemplo
+        <i data-lucide="flask-conical"></i><span class="btn-label"> Ejemplo</span>
       </button>
       <button class="btn btn-primary" onclick="showView('revision')">
-        <i data-lucide="sparkles"></i> Revisar semana
+        <i data-lucide="sparkles"></i><span class="btn-label"> Revisar semana</span>
       </button>
     </div>
   </div>
@@ -496,11 +574,11 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
         <textarea class="input-field" id="entry-body" placeholder="Desarrolla tu nota, idea o tarea aquí..." rows="4"></textarea>
       </div>
 
-      <div class="type-chips" id="type-chips">
-        <button class="chip selected" data-type="nota" onclick="selectType(this)"><i data-lucide="file-text" style="width:12px;height:12px"></i> Nota</button>
-        <button class="chip" data-type="idea" onclick="selectType(this)"><i data-lucide="lightbulb" style="width:12px;height:12px"></i> Idea</button>
-        <button class="chip" data-type="tarea" onclick="selectType(this)"><i data-lucide="check-square" style="width:12px;height:12px"></i> Tarea</button>
-        <button class="chip" data-type="reflexion" onclick="selectType(this)"><i data-lucide="message-circle" style="width:12px;height:12px"></i> Reflexión</button>
+      <div class="type-chips" id="type-chips" role="radiogroup" aria-label="Tipo de entrada">
+        <button class="chip selected" data-type="nota" onclick="selectType(this)" role="radio" aria-checked="true"><i data-lucide="file-text" style="width:12px;height:12px"></i> Nota</button>
+        <button class="chip" data-type="idea" onclick="selectType(this)" role="radio" aria-checked="false"><i data-lucide="lightbulb" style="width:12px;height:12px"></i> Idea</button>
+        <button class="chip" data-type="tarea" onclick="selectType(this)" role="radio" aria-checked="false"><i data-lucide="check-square" style="width:12px;height:12px"></i> Tarea</button>
+        <button class="chip" data-type="reflexion" onclick="selectType(this)" role="radio" aria-checked="false"><i data-lucide="message-circle" style="width:12px;height:12px"></i> Reflexión</button>
       </div>
 
       <div class="tags-row" id="tags-row">
@@ -569,6 +647,27 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
   </div>
 </main>
 
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottom-nav" aria-label="Navegación principal">
+  <button class="bottom-nav-item active" onclick="showView('captura')" id="bnav-captura">
+    <i data-lucide="plus-circle"></i>
+    <span class="bnav-label">Capturar</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showView('semana')" id="bnav-semana">
+    <i data-lucide="calendar-days"></i>
+    <span class="bottom-nav-badge" id="bnav-badge-semana" style="display:none">0</span>
+    <span class="bnav-label">Semana</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showView('revision')" id="bnav-revision">
+    <i data-lucide="brain-circuit"></i>
+    <span class="bnav-label">Revisar</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showView('todas')" id="bnav-todas">
+    <i data-lucide="archive"></i>
+    <span class="bnav-label">Notas</span>
+  </button>
+</nav>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -596,16 +695,16 @@ const TOPIC_COLORS = [
 
 // ── THEME TOGGLE ──
 (function(){
-  const t = document.querySelector('[data-theme-toggle]');
+  const buttons = document.querySelectorAll('[data-theme-toggle]');
   const r = document.documentElement;
   let d = r.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   r.setAttribute('data-theme', d);
-  updateToggleIcon(t, d);
-  t && t.addEventListener('click', () => {
+  buttons.forEach(t => updateToggleIcon(t, d));
+  buttons.forEach(t => t && t.addEventListener('click', () => {
     d = d === 'dark' ? 'light' : 'dark';
     r.setAttribute('data-theme', d);
-    updateToggleIcon(t, d);
-  });
+    buttons.forEach(b => updateToggleIcon(b, d));
+  }));
   function updateToggleIcon(el, theme) {
     if (!el) return;
     el.innerHTML = theme === 'dark'
@@ -635,8 +734,11 @@ const viewTitles = {
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
+  const bnavEl = document.getElementById('bnav-' + name);
+  if (bnavEl) bnavEl.classList.add('active');
   document.getElementById('view-title').textContent = viewTitles[name];
 
   if (name === 'semana') renderSemana();
@@ -649,8 +751,12 @@ function showView(name) {
 
 // ── TYPE SELECTOR ──
 function selectType(el) {
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.remove('selected');
+    c.setAttribute('aria-checked', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-checked', 'true');
   currentType = el.dataset.type;
 }
 
@@ -748,6 +854,11 @@ function editEntry(id) {
 function updateBadge() {
   const thisWeek = getThisWeekEntries();
   document.getElementById('badge-semana').textContent = thisWeek.length;
+  const bnavBadge = document.getElementById('bnav-badge-semana');
+  if (bnavBadge) {
+    bnavBadge.textContent = thisWeek.length;
+    bnavBadge.style.display = thisWeek.length > 0 ? '' : 'none';
+  }
 }
 
 function getThisWeekEntries() {
