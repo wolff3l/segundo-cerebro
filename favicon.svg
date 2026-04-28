@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <style>
+    .base-stroke { stroke: #28251d; }
+    .base-fill { fill: #28251d; }
+    .accent { fill: #01696f; }
+    @media (prefers-color-scheme: dark) {
+      .base-stroke { stroke: #cdccca; }
+      .base-fill { fill: #cdccca; }
+      .accent { fill: #4f98a3; }
+    }
+  </style>
+  <circle cx="16" cy="16" r="15" class="base-stroke" stroke-width="1.5" opacity="0.2" fill="none"/>
+  <path d="M10 16 C10 10 14 8 16 8 C18 8 22 10 22 16" class="base-stroke" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M10 16 C10 22 13 24 16 24 C19 24 22 22 22 16" class="base-stroke" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <circle cx="10" cy="16" r="2.5" class="base-fill" opacity="0.7"/>
+  <circle cx="22" cy="16" r="2.5" class="base-fill" opacity="0.7"/>
+  <line x1="10" y1="16" x2="22" y2="16" class="base-stroke" stroke-width="1" stroke-dasharray="2 2" opacity="0.4"/>
+  <circle cx="16" cy="12" r="1.5" class="accent" opacity="0.9"/>
+  <circle cx="16" cy="20" r="1.5" class="accent" opacity="0.9"/>
+</svg>
