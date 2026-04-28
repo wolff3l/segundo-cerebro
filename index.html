@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Segundo Cerebro — Revisión Semanal</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f98a3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -462,6 +464,14 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
   <div class="topbar">
     <div class="topbar-title" id="view-title">Capturar nueva entrada</div>
     <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="exportData()" title="Exportar Copia de Seguridad">
+        <i data-lucide="download"></i>
+      </button>
+      <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" title="Importar Copia">
+        <i data-lucide="upload"></i>
+      </button>
+      <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImport(event)">
+      
       <button class="btn btn-ghost" onclick="loadSampleData()" title="Cargar datos de ejemplo">
         <i data-lucide="flask-conical"></i> Ejemplo
       </button>
@@ -539,6 +549,9 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
     <div class="entries-header">
       <h2>Todas las notas</h2>
       <span class="entry-count" id="todas-count"></span>
+    </div>
+    <div class="input-row" style="margin-bottom:var(--space-6)">
+      <input class="input-field" id="search-input" placeholder="🔍 Buscar por título, contenido o etiqueta..." oninput="filterTodas()">
     </div>
     <div id="todas-list"></div>
   </div>
@@ -744,6 +757,64 @@ function getThisWeekEntries() {
   return entries.filter(e => new Date(e.date) >= mon);
 }
 
+// ── EXPORT / IMPORT ──
+function exportData() {
+  if(entries.length === 0) return showToast('⚠️ No hay entradas para exportar');
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(entries, null, 2));
+  const el = document.createElement('a');
+  el.setAttribute("href", dataStr);
+  el.setAttribute("download", `segundo-cerebro-backup-${new Date().toISOString().slice(0,10)}.json`);
+  document.body.appendChild(el);
+  el.click();
+  el.remove();
+  showToast('✓ Respaldo exportado');
+}
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const imported = JSON.parse(event.target.result);
+      if(!Array.isArray(imported)) throw new Error('Formato inválido');
+      if(confirm(`Estás a punto de importar ${imported.length} entradas. ¿Deseas reemplazar tus entradas actuales? (Aceptar = Reemplazar, Cancelar = Combinar)`)) {
+        entries = imported;
+      } else {
+        const existingIds = new Set(entries.map(x => x.id));
+        const newEntries = imported.filter(x => !existingIds.has(x.id));
+        entries = [...newEntries, ...entries].sort((a,b) => new Date(b.date) - new Date(a.date));
+      }
+      saveState();
+      updateBadge();
+      renderRecentEntries();
+      reviewGenerated = false;
+      showToast('✓ Datos importados con éxito');
+    } catch(err) {
+      showToast('⚠️ Error al leer el archivo JSON');
+    }
+    e.target.value = ''; // reset input
+  };
+  reader.readAsText(file);
+}
+
+// ── MARKDOWN PARSER ──
+function parseMarkdown(text) {
+  if (!text) return '';
+  let html = escHtml(text);
+  // Bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Links
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color:var(--color-primary);text-decoration:underline">$1</a>');
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+  // Simple Lists (handles hyphen at the start of line)
+  html = html.replace(/(^|<br>)- (.*?)(?=(<br>|$))/g, '$1• $2');
+  return html;
+}
+
 // ── RENDER ENTRIES ──
 function entryTypeClass(type) {
   return { nota: 'type-nota', idea: 'type-idea', tarea: 'type-tarea', reflexion: 'type-reflexion' }[type] || 'type-nota';
@@ -762,7 +833,7 @@ function renderEntryCard(e, showDelete = true) {
       <span class="entry-date">${formatDate(e.date)}</span>
     </div>
     <div class="entry-title">${escHtml(e.title)}</div>
-    ${e.body ? `<div class="entry-body">${escHtml(e.body)}</div>` : ''}
+    ${e.body ? `<div class="entry-body">${parseMarkdown(e.body)}</div>` : ''}
     ${e.tags.length ? `<div class="entry-tags">${e.tags.map(t => `<span class="entry-tag">${escHtml(t)}</span>`).join('')}</div>` : ''}
     ${showDelete ? `<div class="entry-actions">
       <button class="btn-icon" onclick="editEntry(${e.id})" title="Editar"><i data-lucide="edit-2" style="width:14px;height:14px"></i></button>
@@ -820,7 +891,20 @@ function renderGrouped(entries, containerId, countId) {
 }
 
 function renderSemana() { renderGrouped(getThisWeekEntries(), 'semana-list', 'semana-count'); }
-function renderTodas() { renderGrouped(entries, 'todas-list', 'todas-count'); }
+function renderTodas() { 
+  const query = (document.getElementById('search-input').value || '').toLowerCase();
+  if(!query) {
+    renderGrouped(entries, 'todas-list', 'todas-count');
+    return;
+  }
+  const filtered = entries.filter(e => 
+    e.title.toLowerCase().includes(query) || 
+    (e.body && e.body.toLowerCase().includes(query)) ||
+    e.tags.some(t => t.toLowerCase().includes(query))
+  );
+  renderGrouped(filtered, 'todas-list', 'todas-count');
+}
+function filterTodas() { renderTodas(); }
 
 function deleteEntry(id) {
   if (!confirm('¿Seguro que quieres eliminar esta entrada?')) return;
@@ -1066,6 +1150,13 @@ function showToast(msg) {
 lucide.createIcons();
 updateBadge();
 renderRecentEntries();
+
+// ── PWA SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed: ', err));
+  });
+}
 </script>
 </body>
 </html>

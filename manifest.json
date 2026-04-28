@@ -1,0 +1,15 @@
+{
+  "name": "Segundo Cerebro — Revisión Semanal",
+  "short_name": "Cerebro",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#171614",
+  "theme_color": "#4f98a3",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
