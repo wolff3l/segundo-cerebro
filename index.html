@@ -501,7 +501,7 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
 
       <div class="form-footer">
         <span style="font-size:var(--text-xs);color:var(--color-text-faint)">Pulsa <kbd style="background:var(--color-surface-dynamic);padding:1px 5px;border-radius:3px;font-size:10px">Enter</kbd> para añadir etiqueta</span>
-        <button class="btn btn-primary" onclick="saveEntry()">
+        <button class="btn btn-primary" id="save-btn" onclick="saveEntry()">
           <i data-lucide="save"></i> Guardar entrada
         </button>
       </div>
@@ -561,10 +561,15 @@ textarea.input-field { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 <script>
 // ── STATE ──
-let entries = [];
+let entries = JSON.parse(localStorage.getItem('segundo_cerebro_entradas')) || [];
 let currentTags = [];
 let currentType = 'nota';
 let reviewGenerated = false;
+let editingId = null;
+
+function saveState() {
+  localStorage.setItem('segundo_cerebro_entradas', JSON.stringify(entries));
+}
 
 const TOPIC_COLORS = [
   { color: '#4f98a3', bg: 'rgba(79,152,163,0.12)' },
@@ -663,15 +668,32 @@ function saveEntry() {
   const body = document.getElementById('entry-body').value.trim();
   if (!title && !body) { showToast('⚠️ Escribe algo antes de guardar'); return; }
 
-  const entry = {
-    id: Date.now(),
-    title: title || body.substring(0, 60) + (body.length > 60 ? '…' : ''),
-    body,
-    type: currentType,
-    tags: [...currentTags],
-    date: new Date().toISOString(),
-  };
-  entries.unshift(entry);
+  if (editingId) {
+    const entry = entries.find(e => e.id === editingId);
+    if (entry) {
+      entry.title = title || body.substring(0, 60) + (body.length > 60 ? '…' : '');
+      entry.body = body;
+      entry.type = currentType;
+      entry.tags = [...currentTags];
+    }
+    editingId = null;
+    const saveBtn = document.getElementById('save-btn');
+    if(saveBtn) saveBtn.innerHTML = '<i data-lucide="save"></i> Guardar entrada';
+    showToast('✓ Entrada actualizada');
+  } else {
+    const entry = {
+      id: Date.now(),
+      title: title || body.substring(0, 60) + (body.length > 60 ? '…' : ''),
+      body,
+      type: currentType,
+      tags: [...currentTags],
+      date: new Date().toISOString(),
+    };
+    entries.unshift(entry);
+    showToast('✓ Entrada guardada');
+  }
+
+  saveState();
 
   // reset form
   document.getElementById('entry-title').value = '';
@@ -681,7 +703,33 @@ function saveEntry() {
   updateBadge();
   renderRecentEntries();
   reviewGenerated = false;
-  showToast('✓ Entrada guardada');
+  lucide.createIcons();
+}
+
+function editEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+
+  editingId = id;
+  
+  document.getElementById('entry-title').value = entry.title;
+  document.getElementById('entry-body').value = entry.body || '';
+  
+  currentTags = [...entry.tags];
+  renderCurrentTags();
+  
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.remove('selected');
+    if (c.dataset.type === entry.type) c.classList.add('selected');
+  });
+  currentType = entry.type;
+
+  const saveBtn = document.getElementById('save-btn');
+  if(saveBtn) saveBtn.innerHTML = '<i data-lucide="edit-3"></i> Actualizar entrada';
+  
+  showView('captura');
+  lucide.createIcons();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function updateBadge() {
@@ -716,7 +764,10 @@ function renderEntryCard(e, showDelete = true) {
     <div class="entry-title">${escHtml(e.title)}</div>
     ${e.body ? `<div class="entry-body">${escHtml(e.body)}</div>` : ''}
     ${e.tags.length ? `<div class="entry-tags">${e.tags.map(t => `<span class="entry-tag">${escHtml(t)}</span>`).join('')}</div>` : ''}
-    ${showDelete ? `<div class="entry-actions"><button class="btn-icon" onclick="deleteEntry(${e.id})" title="Eliminar"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div>` : ''}
+    ${showDelete ? `<div class="entry-actions">
+      <button class="btn-icon" onclick="editEntry(${e.id})" title="Editar"><i data-lucide="edit-2" style="width:14px;height:14px"></i></button>
+      <button class="btn-icon" onclick="deleteEntry(${e.id})" title="Eliminar"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+    </div>` : ''}
   </div>`;
 }
 
@@ -772,7 +823,9 @@ function renderSemana() { renderGrouped(getThisWeekEntries(), 'semana-list', 'se
 function renderTodas() { renderGrouped(entries, 'todas-list', 'todas-count'); }
 
 function deleteEntry(id) {
+  if (!confirm('¿Seguro que quieres eliminar esta entrada?')) return;
   entries = entries.filter(e => e.id !== id);
+  saveState();
   updateBadge();
   renderRecentEntries();
   reviewGenerated = false;
@@ -994,6 +1047,7 @@ function loadSampleData() {
     entries.push({ id: Date.now() + i, title: s.title, body: s.body, type: s.type, tags: s.tags, date: date.toISOString() });
   });
 
+  saveState();
   updateBadge();
   renderRecentEntries();
   reviewGenerated = false;
